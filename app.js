@@ -22,10 +22,8 @@ const elements = {
   bottomOffset: $("#bottomOffset"),
   strokeSize: $("#strokeSize"),
   quality: $("#quality"),
-  whisperStatus: $("#whisperStatus"),
-  ffmpegStatus: $("#ffmpegStatus"),
-  installWhisperButton: $("#installWhisperButton"),
-  installFfmpegButton: $("#installFfmpegButton"),
+  dependencyStatus: $("#dependencyStatus"),
+  installDependenciesButton: $("#installDependenciesButton"),
 };
 
 const ctx = elements.canvas.getContext("2d");
@@ -36,6 +34,7 @@ let isExporting = false;
 let pendingSeek = null;
 let exportEndTime = null;
 let lastExportInfo = null;
+let autoJobId = 0;
 
 function setStatus(text) {
   elements.readyState.textContent = text;
@@ -48,22 +47,9 @@ function setProgress(label, percent) {
   elements.progressBar.value = safePercent;
 }
 
-const dependencyControls = {
-  whisper: {
-    button: elements.installWhisperButton,
-    status: elements.whisperStatus,
-    label: "Whisper",
-  },
-  ffmpeg: {
-    button: elements.installFfmpegButton,
-    status: elements.ffmpegStatus,
-    label: "FFmpeg",
-  },
-};
-
-function setDependencyStatus(target, text) {
-  if (dependencyControls[target]?.status) {
-    dependencyControls[target].status.textContent = text;
+function setDependencyStatus(text) {
+  if (elements.dependencyStatus) {
+    elements.dependencyStatus.textContent = text;
   }
 }
 
@@ -274,6 +260,11 @@ function waitForVideoEvent(name) {
   });
 }
 
+function waitForVideoMetadata() {
+  if (elements.video.readyState >= 1) return Promise.resolve();
+  return waitForVideoEvent("loadedmetadata");
+}
+
 async function exportVideo() {
   const { video, canvas } = elements;
   if (!video.src || isExporting) return;
@@ -291,8 +282,13 @@ async function exportVideo() {
   setProgress("准备导出", 0);
 
   video.pause();
+  const needsSeekToStart = Math.abs(video.currentTime) > 0.05;
   video.currentTime = 0;
-  await waitForVideoEvent("seeked");
+  if (needsSeekToStart) {
+    await waitForVideoEvent("seeked");
+  } else {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  }
   renderFrame();
 
   const canvasStream = canvas.captureStream(30);
@@ -331,19 +327,35 @@ async function exportVideo() {
     await video.play();
   }
 
+  let progressTimer = 0;
+  const stopRecorder = () => {
+    video.pause();
+    if (recorder.state === "recording") recorder.stop();
+  };
   const tick = () => {
     renderFrame();
     const percent = video.duration ? (video.currentTime / video.duration) * 100 : 0;
     setProgress("正在烧录字幕", percent);
     if (exportEndTime !== null && video.currentTime >= exportEndTime) {
-      video.pause();
-      if (recorder.state === "recording") recorder.stop();
+      stopRecorder();
       return;
     }
     if (!video.ended && !video.paused) {
       animationFrame = requestAnimationFrame(tick);
     }
   };
+  progressTimer = window.setInterval(() => {
+    if (recorder.state !== "recording") {
+      window.clearInterval(progressTimer);
+      return;
+    }
+    renderFrame();
+    const percent = video.duration ? (video.currentTime / video.duration) * 100 : 0;
+    setProgress("正在烧录字幕", percent);
+    if (exportEndTime !== null && video.currentTime >= exportEndTime) {
+      stopRecorder();
+    }
+  }, 250);
   tick();
 
   if (exportEndTime === null) {
@@ -351,6 +363,7 @@ async function exportVideo() {
     recorder.stop();
   }
   await stopped;
+  window.clearInterval(progressTimer);
 
   let blob = new Blob(chunks, { type: mimeType });
   if (typeof window.ysFixWebmDuration === "function") {
@@ -386,6 +399,99 @@ async function exportVideo() {
   startPreview();
 }
 
+async function transcribeVideo(file, jobId) {
+  setStatus("识别中");
+  setProgress("正在上传视频给本地 Whisper", 8);
+  const response = await fetch(`/transcribe?file=${encodeURIComponent(file.name)}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `字幕生成失败: ${response.status}`);
+  }
+  if (jobId !== autoJobId) return;
+
+  setProgress("正在读取自动生成字幕", 55);
+  const result = await response.json();
+  const srt = result.srt || (result.srtUrl
+    ? await fetch(result.srtUrl).then((subtitleResponse) => subtitleResponse.text())
+    : "");
+  primaryCues = parseSubtitles(srt);
+  secondaryCues = [];
+  if (!primaryCues.length) {
+    throw new Error("Whisper 没有识别到可用字幕");
+  }
+
+  elements.primaryText.value = srt;
+  elements.secondaryText.value = "";
+  setProgress(`已自动生成 ${primaryCues.length} 条字幕`, 68);
+  renderFrame();
+  updateExportState();
+}
+
+async function autoSubtitleVideo(file, jobId) {
+  setStatus("自动处理中");
+  setProgress("正在生成并嵌入字幕", 8);
+  const response = await fetch(`/auto-subtitle?file=${encodeURIComponent(file.name)}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  });
+
+  if (!response.ok) {
+    let message = `自动字幕处理失败: ${response.status}`;
+    try {
+      const payload = await response.json();
+      message = payload.error || message;
+    } catch (error) {
+      message = await response.text() || message;
+    }
+    throw new Error(message);
+  }
+  if (jobId !== autoJobId) return;
+
+  const result = await response.json();
+  primaryCues = parseSubtitles(result.srt || "");
+  secondaryCues = [];
+  elements.primaryText.value = result.srt || "";
+  elements.secondaryText.value = "";
+  if (!primaryCues.length) {
+    throw new Error("Whisper 没有识别到可用字幕");
+  }
+
+  if (result.videoUrl) {
+    setVideoSource(result.videoUrl, result.downloadName || result.videoFile || file.name);
+    elements.downloadLink.href = result.videoUrl;
+    elements.downloadLink.download = result.downloadName || "subtitled-video.mp4";
+    elements.downloadLink.classList.add("visible");
+  }
+  const modeText = result.burned === false ? "并写入视频字幕轨" : "并嵌入视频画面";
+  setProgress(`已生成 ${primaryCues.length} 条字幕${modeText}`, 100);
+  setStatus("已完成");
+  updateExportState();
+}
+
+async function autoGenerateAndExport(file) {
+  const jobId = autoJobId;
+  try {
+    await waitForVideoMetadata();
+    await autoSubtitleVideo(file, jobId);
+  } catch (error) {
+    if (jobId !== autoJobId) return;
+    setStatus("自动处理失败");
+    setProgress(error.message || "自动处理失败", 0);
+    isExporting = false;
+    updateExportState();
+  }
+}
+
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active"));
@@ -398,7 +504,11 @@ document.querySelectorAll(".tab").forEach((tab) => {
 elements.videoInput.addEventListener("change", () => {
   const file = elements.videoInput.files?.[0];
   if (!file) return;
+  autoJobId += 1;
+  primaryCues = [];
+  secondaryCues = [];
   setVideoSource(URL.createObjectURL(file), file.name);
+  autoGenerateAndExport(file);
 });
 
 elements.video.addEventListener("loadedmetadata", () => {
@@ -426,66 +536,61 @@ elements.previewButton.addEventListener("click", () => {
 });
 elements.exportButton.addEventListener("click", exportVideo);
 
-async function refreshInstallStatus(target) {
-  const control = dependencyControls[target];
-  if (!control?.button) return;
+async function refreshInstallStatus() {
+  const button = elements.installDependenciesButton;
+  if (!button) return;
   try {
-    const response = await fetch(`/install-status?target=${encodeURIComponent(target)}`);
+    const response = await fetch("/install-status?target=all");
     if (!response.ok) throw new Error("status unavailable");
     const status = await response.json();
     const tail = status.log?.trim().split("\n").slice(-1)[0];
     if (status.state === "idle") {
-      setDependencyStatus(target, `可安装 ${control.label}`);
-      control.button.disabled = false;
+      setDependencyStatus("可安装 Whisper / FFmpeg");
+      button.disabled = false;
     } else if (status.state === "running") {
-      setDependencyStatus(target, tail || `正在安装 ${control.label}...`);
-      control.button.disabled = true;
-      window.setTimeout(() => refreshInstallStatus(target), 1600);
+      setDependencyStatus(tail || "正在安装依赖...");
+      button.disabled = true;
+      window.setTimeout(refreshInstallStatus, 1600);
     } else if (status.state === "success") {
-      setDependencyStatus(target, `${control.label} 已安装`);
-      control.button.disabled = false;
+      setDependencyStatus("Whisper / FFmpeg 已安装");
+      button.disabled = false;
     } else {
-      setDependencyStatus(target, tail || `${control.label} 安装失败`);
-      control.button.disabled = false;
+      setDependencyStatus(tail || "依赖安装失败");
+      button.disabled = false;
     }
   } catch (error) {
-    setDependencyStatus(target, "启动本地服务后可安装");
-    control.button.disabled = true;
+    setDependencyStatus("启动本地服务后可安装");
+    button.disabled = true;
   }
 }
 
-async function installDependencies(target) {
-  const control = dependencyControls[target];
-  if (!control?.button) return;
-  control.button.disabled = true;
-  setDependencyStatus(target, `开始安装 ${control.label}...`);
+async function installDependencies() {
+  const button = elements.installDependenciesButton;
+  if (!button) return;
+  button.disabled = true;
+  setDependencyStatus("开始安装 Whisper / FFmpeg...");
   try {
     const response = await fetch("/install-dependencies", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ target }),
+      body: JSON.stringify({ target: "all" }),
     });
     if (!response.ok) {
       const text = await response.text();
       throw new Error(text || `安装请求失败: ${response.status}`);
     }
-    await refreshInstallStatus(target);
+    await refreshInstallStatus();
   } catch (error) {
-    setDependencyStatus(target, error.message || "安装请求失败");
-    control.button.disabled = false;
+    setDependencyStatus(error.message || "安装请求失败");
+    button.disabled = false;
   }
 }
 
-if (elements.installWhisperButton) {
-  elements.installWhisperButton.addEventListener("click", () => installDependencies("whisper"));
-  refreshInstallStatus("whisper");
-}
-
-if (elements.installFfmpegButton) {
-  elements.installFfmpegButton.addEventListener("click", () => installDependencies("ffmpeg"));
-  refreshInstallStatus("ffmpeg");
+if (elements.installDependenciesButton) {
+  elements.installDependenciesButton.addEventListener("click", installDependencies);
+  refreshInstallStatus();
 }
 
 [elements.fontScale, elements.bottomOffset, elements.strokeSize].forEach((input) => {

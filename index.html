@@ -23,7 +23,7 @@
             <span class="file-icon">+</span>
             <span>
               <strong>上传视频</strong>
-              <small id="videoName">MP4、MOV、WebM 等浏览器可播放格式</small>
+              <small id="videoName">上传后自动识别语音、生成字幕并嵌入</small>
             </span>
           </label>
 
@@ -80,15 +80,10 @@
 
           <div class="dependency-box">
             <div>
-              <strong>语音识别依赖</strong>
-              <small id="whisperStatus">Whisper 未检测</small>
+              <strong>自动字幕依赖</strong>
+              <small id="dependencyStatus">Whisper / FFmpeg 未检测</small>
             </div>
-            <button id="installWhisperButton" class="button secondary" type="button">安装 Whisper</button>
-            <div>
-              <strong>音视频处理依赖</strong>
-              <small id="ffmpegStatus">FFmpeg 未检测</small>
-            </div>
-            <button id="installFfmpegButton" class="button secondary" type="button">安装 FFmpeg</button>
+            <button id="installDependenciesButton" class="button secondary" type="button">安装依赖</button>
           </div>
 
           <div class="action-row">
@@ -118,6 +113,6 @@
     </main>
 
     <script src="./node_modules/fix-webm-duration/fix-webm-duration.js"></script>
-    <script src="./app.js?v=subtitle-test-9"></script>
+    <script src="./app.js?v=subtitle-test-11"></script>
   </body>
 </html>
