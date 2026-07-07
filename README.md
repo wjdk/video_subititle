@@ -15,6 +15,22 @@ npm start
 
 也可以直接打开 `index.html` 使用基础功能；如果需要测试自动加载素材、保存导出结果或修复 WebM duration 元数据，建议使用本地服务。
 
+## 安装语音识别依赖
+
+启动本地服务后，界面里的“安装 Whisper”按钮会调用后端固定脚本：
+
+```bash
+npm run install:whisper
+```
+
+该脚本会创建 `.venv` 并安装 `openai-whisper`。Whisper 处理视频/音频时还需要系统中存在 `ffmpeg`；如果本机没有，请先安装，例如 macOS 可用：
+
+```bash
+brew install ffmpeg
+```
+
+浏览器直接打开 `index.html` 时无法执行本机安装命令，因此安装按钮只在 `npm start` 启动的本地服务模式下可用。
+
 ## 字幕格式
 
 支持标准 SRT / VTT 时间轴，例如：

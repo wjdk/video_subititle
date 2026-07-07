@@ -1,6 +1,7 @@
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
+const { spawn } = require("child_process");
 const { URL } = require("url");
 
 const root = __dirname;
@@ -14,6 +15,11 @@ const mimeTypes = {
   ".mp4": "video/mp4",
   ".srt": "text/plain; charset=utf-8",
   ".webm": "video/webm",
+};
+const installState = {
+  state: "idle",
+  log: "",
+  code: null,
 };
 
 function send(response, status, body, headers = {}) {
@@ -31,6 +37,71 @@ function safePath(urlPath) {
 
 const server = http.createServer((request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
+
+  if (request.method === "GET" && url.pathname === "/install-status") {
+    send(response, 200, JSON.stringify(installState), {
+      "Content-Type": "application/json; charset=utf-8",
+    });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/install-dependencies") {
+    let body = "";
+    request.on("data", (chunk) => {
+      body += chunk;
+    });
+    request.on("end", () => {
+      let payload;
+      try {
+        payload = body ? JSON.parse(body) : {};
+      } catch (error) {
+        send(response, 400, JSON.stringify({ error: "invalid json" }), {
+          "Content-Type": "application/json; charset=utf-8",
+        });
+        return;
+      }
+
+      if (payload.target !== "whisper") {
+        send(response, 400, JSON.stringify({ error: "unsupported dependency target" }), {
+          "Content-Type": "application/json; charset=utf-8",
+        });
+        return;
+      }
+      if (installState.state === "running") {
+        send(response, 409, JSON.stringify({ error: "install already running" }), {
+          "Content-Type": "application/json; charset=utf-8",
+        });
+        return;
+      }
+
+      installState.state = "running";
+      installState.log = "Starting Whisper dependency installation...\n";
+      installState.code = null;
+
+      const installer = spawn(process.execPath, [path.join(root, "scripts", "install-whisper.js")], {
+        cwd: root,
+        env: process.env,
+      });
+      installer.stdout.on("data", (chunk) => {
+        installState.log += chunk.toString();
+      });
+      installer.stderr.on("data", (chunk) => {
+        installState.log += chunk.toString();
+      });
+      installer.on("close", (code) => {
+        installState.code = code;
+        installState.state = code === 0 ? "success" : "failed";
+        installState.log += code === 0
+          ? "\nWhisper dependency installation finished.\n"
+          : `\nWhisper dependency installation failed with code ${code}.\n`;
+      });
+
+      send(response, 202, JSON.stringify({ state: installState.state }), {
+        "Content-Type": "application/json; charset=utf-8",
+      });
+    });
+    return;
+  }
 
   if (request.method === "POST" && url.pathname === "/save-export") {
     const filename = url.searchParams.get("file") || "subtitled-output.webm";

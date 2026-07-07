@@ -209,6 +209,30 @@ p {
   gap: 12px;
 }
 
+.dependency-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #181a1e;
+}
+
+.dependency-box strong,
+.dependency-box small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.dependency-box small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .compact input {
   padding: 0;
 }
@@ -330,7 +354,8 @@ video {
 @media (max-width: 520px) {
   .style-grid,
   .tabs,
-  .action-row {
+  .action-row,
+  .dependency-box {
     grid-template-columns: 1fr;
   }
 }

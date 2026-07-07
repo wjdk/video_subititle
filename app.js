@@ -22,6 +22,8 @@ const elements = {
   bottomOffset: $("#bottomOffset"),
   strokeSize: $("#strokeSize"),
   quality: $("#quality"),
+  dependencyStatus: $("#dependencyStatus"),
+  installWhisperButton: $("#installWhisperButton"),
 };
 
 const ctx = elements.canvas.getContext("2d");
@@ -42,6 +44,12 @@ function setProgress(label, percent) {
   elements.progressLabel.textContent = label;
   elements.progressPercent.textContent = `${safePercent}%`;
   elements.progressBar.value = safePercent;
+}
+
+function setDependencyStatus(text) {
+  if (elements.dependencyStatus) {
+    elements.dependencyStatus.textContent = text;
+  }
 }
 
 function updateExportState() {
@@ -402,6 +410,60 @@ elements.previewButton.addEventListener("click", () => {
   startPreview();
 });
 elements.exportButton.addEventListener("click", exportVideo);
+
+async function refreshInstallStatus() {
+  if (!elements.installWhisperButton) return;
+  try {
+    const response = await fetch("/install-status");
+    if (!response.ok) throw new Error("status unavailable");
+    const status = await response.json();
+    const tail = status.log?.trim().split("\n").slice(-1)[0];
+    if (status.state === "idle") {
+      setDependencyStatus("可安装 Whisper");
+      elements.installWhisperButton.disabled = false;
+    } else if (status.state === "running") {
+      setDependencyStatus(tail || "正在安装 Whisper...");
+      elements.installWhisperButton.disabled = true;
+      window.setTimeout(refreshInstallStatus, 1600);
+    } else if (status.state === "success") {
+      setDependencyStatus("Whisper 已安装");
+      elements.installWhisperButton.disabled = false;
+    } else {
+      setDependencyStatus(tail || "Whisper 安装失败");
+      elements.installWhisperButton.disabled = false;
+    }
+  } catch (error) {
+    setDependencyStatus("启动本地服务后可安装");
+    elements.installWhisperButton.disabled = true;
+  }
+}
+
+async function installWhisperDependencies() {
+  elements.installWhisperButton.disabled = true;
+  setDependencyStatus("开始安装 Whisper...");
+  try {
+    const response = await fetch("/install-dependencies", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ target: "whisper" }),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `安装请求失败: ${response.status}`);
+    }
+    await refreshInstallStatus();
+  } catch (error) {
+    setDependencyStatus(error.message || "安装请求失败");
+    elements.installWhisperButton.disabled = false;
+  }
+}
+
+if (elements.installWhisperButton) {
+  elements.installWhisperButton.addEventListener("click", installWhisperDependencies);
+  refreshInstallStatus();
+}
 
 [elements.fontScale, elements.bottomOffset, elements.strokeSize].forEach((input) => {
   input.addEventListener("input", renderFrame);
