@@ -1,0 +1,31 @@
+README.md
+  s_f1411ba387a079::t_9bde6d6da7598f 20,24,27
+app.js
+  s_f1411ba387a079::t_3bc43a8195cf71 25-26,28,51-66,429-431,433,438-439,441-443,445-446,448-449,452-453,457-461,468,474,476-477,482-488
+index.html
+  s_f1411ba387a079::t_ccef050fd731ec 84,87-91,121
+package.json
+  s_f1411ba387a079::t_264d0d128f1264 4-6
+scripts/install-ffmpeg.js
+  s_f1411ba387a079::t_c0dbbdeb6f0be8 1-63
+server.js
+  s_f1411ba387a079::t_515e55f50c22e8 19-39,59-66,88-91,105,108,122-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "72cac199f05c5dd3867b109c217ed15082f425ac",
+  "prompts": {},
+  "sessions": {
+    "s_f1411ba387a079": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f36e7-9426-7061-9950-fc296f9386e7",
+        "model": "unknown"
+      },
+      "human_author": "wangjundi.xyz <wangjundi.xyz@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
