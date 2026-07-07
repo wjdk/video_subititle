@@ -22,8 +22,10 @@ const elements = {
   bottomOffset: $("#bottomOffset"),
   strokeSize: $("#strokeSize"),
   quality: $("#quality"),
-  dependencyStatus: $("#dependencyStatus"),
+  whisperStatus: $("#whisperStatus"),
+  ffmpegStatus: $("#ffmpegStatus"),
   installWhisperButton: $("#installWhisperButton"),
+  installFfmpegButton: $("#installFfmpegButton"),
 };
 
 const ctx = elements.canvas.getContext("2d");
@@ -46,9 +48,22 @@ function setProgress(label, percent) {
   elements.progressBar.value = safePercent;
 }
 
-function setDependencyStatus(text) {
-  if (elements.dependencyStatus) {
-    elements.dependencyStatus.textContent = text;
+const dependencyControls = {
+  whisper: {
+    button: elements.installWhisperButton,
+    status: elements.whisperStatus,
+    label: "Whisper",
+  },
+  ffmpeg: {
+    button: elements.installFfmpegButton,
+    status: elements.ffmpegStatus,
+    label: "FFmpeg",
+  },
+};
+
+function setDependencyStatus(target, text) {
+  if (dependencyControls[target]?.status) {
+    dependencyControls[target].status.textContent = text;
   }
 }
 
@@ -411,58 +426,66 @@ elements.previewButton.addEventListener("click", () => {
 });
 elements.exportButton.addEventListener("click", exportVideo);
 
-async function refreshInstallStatus() {
-  if (!elements.installWhisperButton) return;
+async function refreshInstallStatus(target) {
+  const control = dependencyControls[target];
+  if (!control?.button) return;
   try {
-    const response = await fetch("/install-status");
+    const response = await fetch(`/install-status?target=${encodeURIComponent(target)}`);
     if (!response.ok) throw new Error("status unavailable");
     const status = await response.json();
     const tail = status.log?.trim().split("\n").slice(-1)[0];
     if (status.state === "idle") {
-      setDependencyStatus("可安装 Whisper");
-      elements.installWhisperButton.disabled = false;
+      setDependencyStatus(target, `可安装 ${control.label}`);
+      control.button.disabled = false;
     } else if (status.state === "running") {
-      setDependencyStatus(tail || "正在安装 Whisper...");
-      elements.installWhisperButton.disabled = true;
-      window.setTimeout(refreshInstallStatus, 1600);
+      setDependencyStatus(target, tail || `正在安装 ${control.label}...`);
+      control.button.disabled = true;
+      window.setTimeout(() => refreshInstallStatus(target), 1600);
     } else if (status.state === "success") {
-      setDependencyStatus("Whisper 已安装");
-      elements.installWhisperButton.disabled = false;
+      setDependencyStatus(target, `${control.label} 已安装`);
+      control.button.disabled = false;
     } else {
-      setDependencyStatus(tail || "Whisper 安装失败");
-      elements.installWhisperButton.disabled = false;
+      setDependencyStatus(target, tail || `${control.label} 安装失败`);
+      control.button.disabled = false;
     }
   } catch (error) {
-    setDependencyStatus("启动本地服务后可安装");
-    elements.installWhisperButton.disabled = true;
+    setDependencyStatus(target, "启动本地服务后可安装");
+    control.button.disabled = true;
   }
 }
 
-async function installWhisperDependencies() {
-  elements.installWhisperButton.disabled = true;
-  setDependencyStatus("开始安装 Whisper...");
+async function installDependencies(target) {
+  const control = dependencyControls[target];
+  if (!control?.button) return;
+  control.button.disabled = true;
+  setDependencyStatus(target, `开始安装 ${control.label}...`);
   try {
     const response = await fetch("/install-dependencies", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ target: "whisper" }),
+      body: JSON.stringify({ target }),
     });
     if (!response.ok) {
       const text = await response.text();
       throw new Error(text || `安装请求失败: ${response.status}`);
     }
-    await refreshInstallStatus();
+    await refreshInstallStatus(target);
   } catch (error) {
-    setDependencyStatus(error.message || "安装请求失败");
-    elements.installWhisperButton.disabled = false;
+    setDependencyStatus(target, error.message || "安装请求失败");
+    control.button.disabled = false;
   }
 }
 
 if (elements.installWhisperButton) {
-  elements.installWhisperButton.addEventListener("click", installWhisperDependencies);
-  refreshInstallStatus();
+  elements.installWhisperButton.addEventListener("click", () => installDependencies("whisper"));
+  refreshInstallStatus("whisper");
+}
+
+if (elements.installFfmpegButton) {
+  elements.installFfmpegButton.addEventListener("click", () => installDependencies("ffmpeg"));
+  refreshInstallStatus("ffmpeg");
 }
 
 [elements.fontScale, elements.bottomOffset, elements.strokeSize].forEach((input) => {

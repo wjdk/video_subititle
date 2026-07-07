@@ -1,8 +1,9 @@
 {
   "scripts": {
     "start": "node server.js",
-    "check": "node --check app.js && node --check server.js && node --check scripts/install-whisper.js",
-    "install:whisper": "node scripts/install-whisper.js"
+    "check": "node --check app.js && node --check server.js && node --check scripts/install-whisper.js && node --check scripts/install-ffmpeg.js",
+    "install:whisper": "node scripts/install-whisper.js",
+    "install:ffmpeg": "node scripts/install-ffmpeg.js"
   },
   "dependencies": {
     "fix-webm-duration": "^1.0.6"

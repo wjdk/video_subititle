@@ -81,9 +81,14 @@
           <div class="dependency-box">
             <div>
               <strong>语音识别依赖</strong>
-              <small id="dependencyStatus">Whisper 未检测</small>
+              <small id="whisperStatus">Whisper 未检测</small>
             </div>
             <button id="installWhisperButton" class="button secondary" type="button">安装 Whisper</button>
+            <div>
+              <strong>音视频处理依赖</strong>
+              <small id="ffmpegStatus">FFmpeg 未检测</small>
+            </div>
+            <button id="installFfmpegButton" class="button secondary" type="button">安装 FFmpeg</button>
           </div>
 
           <div class="action-row">
@@ -113,6 +118,6 @@
     </main>
 
     <script src="./node_modules/fix-webm-duration/fix-webm-duration.js"></script>
-    <script src="./app.js?v=subtitle-test-8"></script>
+    <script src="./app.js?v=subtitle-test-9"></script>
   </body>
 </html>

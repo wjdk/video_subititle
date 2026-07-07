@@ -17,13 +17,14 @@ npm start
 
 ## 安装语音识别依赖
 
-启动本地服务后，界面里的“安装 Whisper”按钮会调用后端固定脚本：
+启动本地服务后，界面里的“安装 Whisper”和“安装 FFmpeg”按钮会调用后端固定脚本：
 
 ```bash
 npm run install:whisper
+npm run install:ffmpeg
 ```
 
-该脚本会创建 `.venv` 并安装 `openai-whisper`。Whisper 处理视频/音频时还需要系统中存在 `ffmpeg`；如果本机没有，请先安装，例如 macOS 可用：
+Whisper 脚本会创建 `.venv` 并安装 `openai-whisper`。Whisper 处理视频/音频时还需要系统中存在 `ffmpeg`；macOS 下 FFmpeg 脚本会使用 Homebrew 安装：
 
 ```bash
 brew install ffmpeg

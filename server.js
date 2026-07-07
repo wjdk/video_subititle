@@ -16,10 +16,27 @@ const mimeTypes = {
   ".srt": "text/plain; charset=utf-8",
   ".webm": "video/webm",
 };
-const installState = {
-  state: "idle",
-  log: "",
-  code: null,
+const installTargets = {
+  whisper: {
+    label: "Whisper",
+    script: path.join(root, "scripts", "install-whisper.js"),
+  },
+  ffmpeg: {
+    label: "FFmpeg",
+    script: path.join(root, "scripts", "install-ffmpeg.js"),
+  },
+};
+const installStates = {
+  whisper: {
+    state: "idle",
+    log: "",
+    code: null,
+  },
+  ffmpeg: {
+    state: "idle",
+    log: "",
+    code: null,
+  },
 };
 
 function send(response, status, body, headers = {}) {
@@ -39,7 +56,14 @@ const server = http.createServer((request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
 
   if (request.method === "GET" && url.pathname === "/install-status") {
-    send(response, 200, JSON.stringify(installState), {
+    const target = url.searchParams.get("target") || "whisper";
+    if (!installStates[target]) {
+      send(response, 400, JSON.stringify({ error: "unsupported dependency target" }), {
+        "Content-Type": "application/json; charset=utf-8",
+      });
+      return;
+    }
+    send(response, 200, JSON.stringify(installStates[target]), {
       "Content-Type": "application/json; charset=utf-8",
     });
     return;
@@ -61,7 +85,10 @@ const server = http.createServer((request, response) => {
         return;
       }
 
-      if (payload.target !== "whisper") {
+      const target = payload.target;
+      const installTarget = installTargets[target];
+      const installState = installStates[target];
+      if (!installTarget || !installState) {
         send(response, 400, JSON.stringify({ error: "unsupported dependency target" }), {
           "Content-Type": "application/json; charset=utf-8",
         });
@@ -75,10 +102,10 @@ const server = http.createServer((request, response) => {
       }
 
       installState.state = "running";
-      installState.log = "Starting Whisper dependency installation...\n";
+      installState.log = `Starting ${installTarget.label} dependency installation...\n`;
       installState.code = null;
 
-      const installer = spawn(process.execPath, [path.join(root, "scripts", "install-whisper.js")], {
+      const installer = spawn(process.execPath, [installTarget.script], {
         cwd: root,
         env: process.env,
       });
@@ -92,8 +119,8 @@ const server = http.createServer((request, response) => {
         installState.code = code;
         installState.state = code === 0 ? "success" : "failed";
         installState.log += code === 0
-          ? "\nWhisper dependency installation finished.\n"
-          : `\nWhisper dependency installation failed with code ${code}.\n`;
+          ? `\n${installTarget.label} dependency installation finished.\n`
+          : `\n${installTarget.label} dependency installation failed with code ${code}.\n`;
       });
 
       send(response, 202, JSON.stringify({ state: installState.state }), {
