@@ -1,0 +1,27 @@
+README.md
+  s_f1411ba387a079::t_ffbdc02b5b3fd1 3,14,20,24,33,51-52,54-55
+app.js
+  s_f1411ba387a079::t_200e0d9f679e62 25-26,37,50-52,263-267,285,287-291,330-334,340,347-358,366,402-494,507-509,511,539-541,543,548-549,551-553,555-556,558-559,562-563,567-571,578,584,586-587,591-593
+index.html
+  s_f1411ba387a079::t_72360dcf678fba 26,83-84,86,116
+server.js
+  s_f1411ba387a079::t_47c187a7ce0f03 18,20-22,32-38,51-55,71-382,432-440,442-457,459-461,463-505
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "6f3cc31d473a1a17fe4ea360f9bc2ed69b447d8e",
+  "prompts": {},
+  "sessions": {
+    "s_f1411ba387a079": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f36e7-9426-7061-9950-fc296f9386e7",
+        "model": "unknown"
+      },
+      "human_author": "wangjundi.xyz <wangjundi.xyz@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
