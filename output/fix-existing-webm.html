@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fix Existing WebM</title>
+  </head>
+  <body>
+    <pre id="log">准备修复...</pre>
+    <script src="../node_modules/fix-webm-duration/fix-webm-duration.js"></script>
+    <script>
+      const log = document.querySelector("#log");
+      const params = new URLSearchParams(window.location.search);
+      const src = params.get("src");
+      const saveUrl = params.get("saveUrl");
+      const duration = Number(params.get("duration"));
+
+      async function run() {
+        if (!src || !saveUrl || !Number.isFinite(duration)) {
+          throw new Error("缺少 src/saveUrl/duration 参数");
+        }
+        log.textContent = "读取 WebM...";
+        const input = await fetch(src).then((response) => response.blob());
+        log.textContent = `修复 duration，输入大小 ${input.size} bytes...`;
+        const fixed = await window.ysFixWebmDuration(input, Math.round(duration * 1000), {
+          logger: false,
+        });
+        log.textContent = `保存 fixed WebM，输出大小 ${fixed.size} bytes...`;
+        const saved = await fetch(saveUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": fixed.type || "video/webm",
+          },
+          body: fixed,
+        }).then((response) => response.json());
+        log.textContent = JSON.stringify({ done: true, saved }, null, 2);
+      }
+
+      run().catch((error) => {
+        log.textContent = `失败: ${error.message}`;
+      });
+    </script>
+  </body>
+</html>

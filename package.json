@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check app.js && node --check server.js"
+  },
+  "dependencies": {
+    "fix-webm-duration": "^1.0.6"
+  }
+}

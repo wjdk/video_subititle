@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Subtitle Burner</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace" aria-label="字幕嵌入工作台">
+        <aside class="panel controls">
+          <div class="brand-row">
+            <div>
+              <h1>字幕嵌入</h1>
+              <p>本地处理视频和双语字幕</p>
+            </div>
+            <span class="status-pill" id="readyState">待上传</span>
+          </div>
+
+          <label class="file-drop" for="videoInput">
+            <input id="videoInput" type="file" accept="video/*" />
+            <span class="file-icon">+</span>
+            <span>
+              <strong>上传视频</strong>
+              <small id="videoName">MP4、MOV、WebM 等浏览器可播放格式</small>
+            </span>
+          </label>
+
+          <div class="tabs" role="tablist" aria-label="字幕输入方式">
+            <button class="tab active" data-tab="files" type="button">字幕文件</button>
+            <button class="tab" data-tab="paste" type="button">粘贴文本</button>
+          </div>
+
+          <div class="tab-panel active" id="filesPanel">
+            <label class="field">
+              <span>主字幕</span>
+              <input id="primaryFile" type="file" accept=".srt,.vtt,text/vtt,text/plain" />
+            </label>
+            <label class="field">
+              <span>翻译字幕</span>
+              <input id="secondaryFile" type="file" accept=".srt,.vtt,text/vtt,text/plain" />
+            </label>
+          </div>
+
+          <div class="tab-panel" id="pastePanel">
+            <label class="field">
+              <span>主字幕 SRT / VTT</span>
+              <textarea id="primaryText" spellcheck="false" placeholder="00:00:01,000 --> 00:00:04,000&#10;这是第一行字幕"></textarea>
+            </label>
+            <label class="field">
+              <span>翻译字幕 SRT / VTT</span>
+              <textarea id="secondaryText" spellcheck="false" placeholder="00:00:01,000 --> 00:00:04,000&#10;This is the first subtitle line"></textarea>
+            </label>
+            <button id="parseText" class="button secondary" type="button">应用文本字幕</button>
+          </div>
+
+          <div class="style-grid">
+            <label class="field compact">
+              <span>字号</span>
+              <input id="fontScale" type="range" min="0.7" max="1.4" step="0.05" value="1" />
+            </label>
+            <label class="field compact">
+              <span>底部距离</span>
+              <input id="bottomOffset" type="range" min="5" max="18" step="1" value="9" />
+            </label>
+            <label class="field compact">
+              <span>描边</span>
+              <input id="strokeSize" type="range" min="3" max="10" step="1" value="6" />
+            </label>
+            <label class="field compact">
+              <span>画质</span>
+              <select id="quality">
+                <option value="8000000">高</option>
+                <option value="5000000" selected>标准</option>
+                <option value="2500000">轻量</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="action-row">
+            <button id="previewButton" class="button secondary" type="button">预览</button>
+            <button id="exportButton" class="button primary" type="button" disabled>导出视频</button>
+          </div>
+
+          <div class="progress-block" aria-live="polite">
+            <div class="progress-line">
+              <span id="progressLabel">等待开始</span>
+              <span id="progressPercent">0%</span>
+            </div>
+            <progress id="progressBar" value="0" max="100"></progress>
+            <a id="downloadLink" class="download-link" download="subtitled-video.webm">下载成片</a>
+          </div>
+        </aside>
+
+        <section class="stage" aria-label="视频预览">
+          <canvas id="canvas" width="1280" height="720"></canvas>
+          <video id="video" playsinline crossorigin="anonymous"></video>
+          <div class="empty-state" id="emptyState">
+            <strong>上传视频后开始预览</strong>
+            <span>字幕会固定在画面底部，自动换行并加描边阴影。</span>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./node_modules/fix-webm-duration/fix-webm-duration.js"></script>
+    <script src="./app.js?v=subtitle-test-7"></script>
+  </body>
+</html>
