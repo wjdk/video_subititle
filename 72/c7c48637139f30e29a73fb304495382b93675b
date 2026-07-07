@@ -1,0 +1,35 @@
+.gitignore
+  s_f1411ba387a079::t_f051548414f6c4 3-4
+README.md
+  s_f1411ba387a079::t_9018283e37389d 18-33
+app.js
+  s_f1411ba387a079::t_86fc1479c4210b 25-26,49-54,414-467
+index.html
+  s_f1411ba387a079::t_2c3f337a45af6a 81-88,116
+package.json
+  s_f1411ba387a079::t_8fbad5caa0548d 4-5
+scripts/install-whisper.js
+  s_f1411ba387a079::t_20a424fb01e441 1-33
+server.js
+  s_f1411ba387a079::t_c1cce4c2bef360 4,19-23,41-105
+styles.css
+  s_f1411ba387a079::t_f47e83ff2a3ef2 212-235,357-358
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "72c7c48637139f30e29a73fb304495382b93675b",
+  "prompts": {},
+  "sessions": {
+    "s_f1411ba387a079": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f36e7-9426-7061-9950-fc296f9386e7",
+        "model": "unknown"
+      },
+      "human_author": "wangjundi.xyz <wangjundi.xyz@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
